@@ -1,0 +1,26 @@
+{
+  "name": "matomo-slack-bot",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "main": "bot.js",
+  "repository": "git@github.com:krmax44/matomo-slack-bot.git",
+  "author": "krmax44 <hi@krmax44.de>",
+  "license": "MIT",
+  "scripts": {
+    "post": "node ./bot.js"
+  },
+  "dependencies": {
+    "got": "^11.8.2"
+  },
+  "devDependencies": {
+    "prettier": "^2.3.1"
+  },
+  "prettier": {
+    "bracketSpacing": true,
+    "singleQuote": true,
+    "useTabs": true,
+    "trailingComma": "none",
+    "arrowParens": "avoid"
+  }
+}

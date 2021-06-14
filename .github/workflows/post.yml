@@ -1,0 +1,28 @@
+name: post
+
+on:
+  schedule:
+    - cron: '0 10 * * 1' # every Monday on 10 am
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '16.x'
+      - uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+      - run: yarn install
+      - name: Post
+        run: yarn post
+        env:
+          MATOMO_SERVER: ${{ secrets.MATOMO_SERVER }}
+          MATOMO_TOKEN: ${{ secrets.MATOMO_TOKEN }}
+          MATOMO_SITE_ID: ${{ secrets.MATOMO_SITE_ID }}
+          SLACK_WEBHOOK: ${{ secrets.MATOMO_SLACK_WEBHOOK }}
