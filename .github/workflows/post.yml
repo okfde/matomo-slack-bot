@@ -25,4 +25,4 @@ jobs:
           MATOMO_SERVER: ${{ secrets.MATOMO_SERVER }}
           MATOMO_TOKEN: ${{ secrets.MATOMO_TOKEN }}
           MATOMO_SITE_ID: ${{ secrets.MATOMO_SITE_ID }}
-          SLACK_WEBHOOK: ${{ secrets.MATOMO_SLACK_WEBHOOK }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
