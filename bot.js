@@ -1,6 +1,6 @@
 import got from 'got';
 
-const { MATOMO_SERVER, MATOMO_TOKEN, MATOMO_SITE_ID, SLACK_WEBHOOK } =
+const { MATOMO_SERVER, MATOMO_TOKEN, MATOMO_SITE_ID, SLACK_WEBHOOK, SITE_URL } =
 	process.env;
 const MIN_VISITS = 20;
 
@@ -9,50 +9,96 @@ const matomoUrl = `${MATOMO_SERVER}/index.php?date=previous1&period=week&expande
 const stats = await got
 	.get(matomoUrl)
 	.json()
-	.catch(error => console.log(error.response.body));
+	.catch(error => console.log(error.response.body) && process.exit(1));
 
 const firstPeriod = Object.keys(stats)[0];
 const pageTree = stats[firstPeriod];
 
-let level = 0;
-const mapPage = page => ({
-	label: page.label,
-	visits: page.nb_visits,
-	subTree:
-		level++ === 0 &&
-		page.subtable?.map(mapPage).filter(page => page.visits >= MIN_VISITS)
-});
+const isSignificant = (visits, parent) => {
+	const sorted = parent.map(p => p.nb_visits).sort((a, b) => a - b);
+	const mid = Math.ceil(parent.length / 2);
 
-const pages = pageTree
-	.map(page => {
-		level = 0;
-		return mapPage(page);
-	})
-	.filter(page => page.visits >= MIN_VISITS);
+	const median =
+		parent.length % 2 === 0
+			? (sorted[mid] + sorted[mid - 1]) / 2
+			: sorted[mid - 1];
 
-const pageToMd = page => {
-	let text = `*${page.label}*: _${page.visits} visits_\n`;
+	return visits >= median;
+};
 
-	if (page.subTree) {
-		text += page.subTree
-			.map(pageToMd)
-			.map(t => `> ${t}`)
-			.join('');
+const prettyPath = (...sections) =>
+	sections.map(s => s.replace(/^\/?(.*?)\/?$/, '$1')).join('/');
+
+const goodPage = page =>
+	!page.label.endsWith('/index') && !/^\/?[\?&]/.test(page.label);
+
+const flattenTree = (tree, parent) => {
+	const done = [];
+
+	for (const page of tree) {
+		const label = prettyPath(parent.label, page.label);
+		const cleaned = { label, visits: page.nb_visits };
+
+		const subPages = page.subtable?.filter(goodPage);
+
+		if (subPages?.length) {
+			done.push(...flattenTree(subPages, cleaned));
+		} else if (cleaned.visits >= MIN_VISITS) {
+			done.push(cleaned);
+		}
 	}
 
-	return text.length > 3000 ? text.slice(0, 2999) + '…' : text;
+	return done
+		.slice(0, 12)
+		.filter(goodPage)
+		.sort((a, b) => b.visits - a.visits);
+};
+
+const pageToMd = page => {
+	const link = `<${SITE_URL + '/' + page.label.replace('/index', '')}|${
+		page.label
+	}>`;
+	return `${link}: _${page.visits} visits_\n`;
+};
+
+const treeToBlocks = (tree, level = 0) => {
+	const blocks = [];
+
+	for (const page of tree) {
+		const { label, nb_visits: visits } = page;
+
+		if (!isSignificant(visits, tree)) continue;
+		if (visits <= MIN_VISITS) continue;
+		if (level > 3) continue;
+
+		let text = pageToMd({ label, visits });
+
+		if (page.subtable?.length) {
+			const subtree = flattenTree(page.subtable, page);
+			text += subtree
+				.map(pageToMd)
+				.map(t => `> ${t}`)
+				.join('');
+		}
+
+		text = text.length > 3000 ? text.slice(0, 2999) + '…' : text;
+
+		blocks.push({
+			type: 'section',
+			text: {
+				type: 'mrkdwn',
+				text
+			}
+		});
+	}
+
+	return blocks;
 };
 
 const attachments = [
 	{
 		color: '#0034a5',
-		blocks: pages.map(page => ({
-			type: 'section',
-			text: {
-				type: 'mrkdwn',
-				text: pageToMd(page)
-			}
-		}))
+		blocks: treeToBlocks(pageTree)
 	}
 ];
 
