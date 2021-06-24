@@ -2,7 +2,7 @@ name: post
 
 on:
   schedule:
-    - cron: '0 10 * * 1' # every Monday on 10 am
+    - cron: '0 8 * * 1' # every Monday on 10 am cest
   workflow_dispatch:
 
 jobs:
