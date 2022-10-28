@@ -28,6 +28,6 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SITE_URL: ${{ secrets.SITE_URL }}
       - name: Keepalive
-        uses: gautamkrishnar/keepalive-workflow@1.0.6
+        uses: gautamkrishnar/keepalive-workflow@1.0.10
         with:
           time_elapsed: 30
